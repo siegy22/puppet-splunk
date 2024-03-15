@@ -41,6 +41,8 @@ describe 'splunk::forwarder class' do
 
     describe service(service_name) do
       it { is_expected.to be_enabled }
+
+      system('systemctl status Splunkd')
       it { is_expected.to be_running }
     end
   end

@@ -10,14 +10,127 @@ on:
     branches:
       - main
       - master
+      - fix-ci
+  workflow_call:
+    inputs:
+      pidfile_workaround:
+        description: How to apply the systemd PIDFile workaround for acceptance tests, if at all
+        default: 'false'
+        required: false
+        type: string
+      rubocop:
+        description: Whether to run Rubocop
+        default: true
+        required: false
+        type: boolean
+      timeout_minutes:
+        description: The maximum time (in minutes) for a job to take.
+        default: 45
+        required: false
+        type: number
+      working-directory:
+        description: The working directory where all jobs should be executed. Used for modules in subdirectories like a monorepo or a control repository.
+        default: '.'
+        required: false
+        type: string
+      cache-version:
+        description: The cache version to pass to setup-ruby
+        default: '0'
+        required: false
+        type: string
+      additional_packages:
+        description: String of additional packages that should be installed
+        default: ''
+        required: false
+        type: string
+      beaker_hypervisor:
+        description: The hypervisor beaker will use to start containers/VMs
+        default: docker
+        required: false
+        type: string
+      beaker_facter:
+        description: Expand the Beaker matrix based on a fact
+        default: 'false'
+        required: false
+        type: string
+      domain:
+        description: The domain that will be used for the beaker instances
+        default: "example.com"
+        required: false
+        type: string
+      unit_runs_on:
+        description: the runner group used for unit jobs run on
+        default: ubuntu-latest
+        required: false
+        type: string
+      acceptance_runs_on:
+        description: the runner group used for acceptance jobs run on
+        default: ubuntu-20.04
+        required: false
+        type: string
+    secrets:
+      beaker_hcloud_token:
+        description: token to access the Hetzner Cloud API
+        required: false
 
 concurrency:
   group: ${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
-  puppet:
-    name: Puppet
-    uses: voxpupuli/gha-puppet/.github/workflows/beaker.yml@v2
-    with:
-      pidfile_workaround: 'false'
+  setup_matrix:
+    defaults:
+      run:
+        working-directory: '.'
+    name: Static validations
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      puppet_unit_test_matrix: ${{ steps.get-outputs.outputs.puppet_unit_test_matrix }}
+      puppet_beaker_test_matrix: ${{ steps.get-outputs.outputs.puppet_beaker_test_matrix }}
+    env:
+      BUNDLE_WITHOUT: development:system_tests:release
+      PUPPET_GEM_VERSION: "~> 7.0"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          cache-version: 0
+          working-directory: '.'
+      - name: Run static validations
+        run: bundle exec rake validate lint check
+      - name: Setup Test Matrix
+        id: get-outputs
+        run: bundle exec metadata2gha --domain example.com --pidfile-workaround false --beaker-facter "false"
+
+  acceptance:
+    defaults:
+      run:
+        working-directory: '.'
+    needs: setup_matrix
+    runs-on: ubuntu-20.04
+    env:
+      BUNDLE_WITHOUT: development:test:release
+      BEAKER_HCLOUD_TOKEN: '${{ secrets.beaker_hcloud_token }}'
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{fromJson(needs.setup_matrix.outputs.puppet_beaker_test_matrix)}}
+    name: "${{ matrix.name }}"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          cache-version: 0
+          working-directory: '.'
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+      - name: Run tests
+        run: bundle exec rake beaker
+        env: ${{ matrix.env }}

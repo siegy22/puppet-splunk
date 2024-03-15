@@ -15,61 +15,10 @@
       ]
     },
     {
-      "operatingsystem": "CentOS",
-      "operatingsystemrelease": [
-        "7"
-      ]
-    },
-    {
       "operatingsystem": "Rocky",
       "operatingsystemrelease": [
         "8",
         "9"
-      ]
-    },
-    {
-      "operatingsystem": "Debian",
-      "operatingsystemrelease": [
-        "10"
-      ]
-    },
-    {
-      "operatingsystem": "Ubuntu",
-      "operatingsystemrelease": [
-        "20.04"
-      ]
-    },
-    {
-      "operatingsystem": "OpenSUSE",
-      "operatingsystemrelease": [
-        "15"
-      ]
-    },
-    {
-      "operatingsystem": "Solaris",
-      "operatingsystemrelease": [
-        "10",
-        "11",
-        "12"
-      ]
-    },
-    {
-      "operatingsystem": "FreeBSD",
-      "operatingsystemrelease": [
-        "12"
-      ]
-    },
-    {
-      "operatingsystem": "Windows",
-      "operatingsystemrelease": [
-        "2008",
-        "2008R2",
-        "2012",
-        "2012R2",
-        "2016",
-        "7",
-        "8",
-        "10"
       ]
     }
   ],
